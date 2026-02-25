@@ -196,7 +196,6 @@
         const text = input.value.trim();
 
         if (input.disabled) return; 
-        
         if (!text) return; 
 
         if (!key) {
@@ -247,12 +246,18 @@
         let payloadMessages = JSON.parse(JSON.stringify(messageHistory));
         let payloadTemperature = 0.7; 
 
-        if (activeModel.includes('deepseek')) {
-            payloadTemperature = 0.6; 
+        // 【修改點 1】全面格式兼容：只要是走 OpenRouter (無論是不是 DeepSeek)，一律將 System 轉為 User
+        // 這能解決 Llama 等免費模型回傳 400 格式錯誤的問題
+        if (isOpenRouter || activeModel.includes('deepseek')) {
             if (payloadMessages.length > 0 && payloadMessages[0].role === 'system') {
                 payloadMessages[0].role = 'user';
                 payloadMessages[0].content = "[系統底層指令設定]\n" + payloadMessages[0].content;
             }
+        }
+        
+        // DeepSeek 專屬溫度
+        if (activeModel.includes('deepseek')) {
+            payloadTemperature = 0.6; 
         }
 
         const requestHeaders = {
@@ -275,16 +280,20 @@
                 })
             });
 
-            if (res.status === 429 && isOpenRouter) {
+            // 【修改點 2】增強型備援：遇到 400, 402, 429 任一錯誤，全都自動切換備援模型
+            if ((res.status === 429 || res.status === 400 || res.status === 402) && isOpenRouter) {
                 const fallbackModel = cachedFreeModels.fallback; 
-                loader.innerText = `[主節點塞車，自動切換備援神經網路 (${fallbackModel.split('/')[1]})...]`;
+                loader.innerText = `[主節點異常 (${res.status})，自動切換備援神經網路 (${fallbackModel.split('/')[1]})...]`;
+                
+                // 備援請求也要確保格式兼容 (System -> User)
+                let fallbackPayload = JSON.parse(JSON.stringify(payloadMessages)); // 確保是乾淨的備援 payload
                 
                 res = await fetch(apiUrl, {
                     method: "POST",
                     headers: requestHeaders,
                     body: JSON.stringify({ 
                         model: fallbackModel, 
-                        messages: payloadMessages, 
+                        messages: fallbackPayload, 
                         temperature: 0.7 
                     })
                 });
@@ -409,7 +418,6 @@
     updateCoreMemory(); 
     updateStatusUI();
 
-    // 【新增功能】一開始遊戲時給予玩家的 UI 新手引導 (純前端顯示，不佔用 Token)
     const welcomeHtml = `
         <strong style="color: #00ff41;">[系統提示：神經連線建立成功]</strong><br><br>
         新手獵人，歡迎來到廢土。在開始行動前，建議你可以先嘗試以下指令：<br><br>
