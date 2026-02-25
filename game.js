@@ -28,7 +28,6 @@
     let lastRequestTime = 0; 
     const THROTTLE_LIMIT = 4000; 
 
-    // 【核心升級 1】建立動態模型快取庫，預設放入已知的好模型作為底線防護
     let cachedFreeModels = {
         versatile: "meta-llama/llama-3.3-70b-instruct:free", 
         complex: "deepseek/deepseek-r1:free",
@@ -36,26 +35,21 @@
         isFetched: false
     };
 
-    // 【核心升級 2】自動透過網路探測 OpenRouter 最新的免費模型清單
     async function updateOpenRouterModels() {
         if (cachedFreeModels.isFetched) return;
         try {
             const res = await fetch("https://openrouter.ai/api/v1/models");
             const data = await res.json();
             
-            // 篩選出所有標記為免費的模型
             const freeModels = data.data.filter(m => m.id.endsWith(':free'));
             
             if (freeModels.length > 0) {
-                // 智慧配對：尋找最佳的邏輯大腦 (優先找 deepseek)
                 const dsModel = freeModels.find(m => m.id.includes('deepseek'));
-                cachedFreeModels.complex = dsModel ? dsModel.id : freeModels[0].id; // 找不到就隨便抓一個免費的頂替
+                cachedFreeModels.complex = dsModel ? dsModel.id : freeModels[0].id; 
 
-                // 智慧配對：尋找最佳的感知大腦 (優先找 llama 70b，退而求其次找任何 llama)
                 const llamaModel = freeModels.find(m => m.id.includes('llama') && m.id.includes('70b')) || freeModels.find(m => m.id.includes('llama'));
                 cachedFreeModels.versatile = llamaModel ? llamaModel.id : freeModels[freeModels.length - 1].id;
 
-                // 智慧配對：尋找備援大腦 (優先找 gemma，作為塞車時的逃生艙)
                 const gemmaModel = freeModels.find(m => m.id.includes('gemma'));
                 cachedFreeModels.fallback = gemmaModel ? gemmaModel.id : freeModels[Math.floor(freeModels.length / 2)].id;
                 
@@ -95,7 +89,6 @@
         }
     };
 
-    // 【核心升級 3】模型路由改為讀取動態快取庫
     function getSmartModel(userInput, isOpenRouter, modeSelected) {
         const complexKeywords = ["打", "攻擊", "開火", "破解", "分析", "解謎", "密碼", "駭入", "戰鬥", "算", "fight", "hack"];
         const isComplex = complexKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
@@ -134,4 +127,287 @@
                 
                 if (typeof action.hp_delta === 'number') gameState.hp += action.hp_delta;
                 if (typeof action.energy_delta === 'number') gameState.energy += action.energy_delta;
-                if (action.location && action.location !== "null") gameState.location = action
+                if (action.location && action.location !== "null") gameState.location = action.location;
+                if (action.item_added && action.item_added !== "null" && !gameState.inventory.includes(action.item_added)) {
+                    gameState.inventory.push(action.item_added);
+                }
+                if (action.item_removed && action.item_removed !== "null") {
+                    gameState.inventory = gameState.inventory.filter(item => item !== action.item_removed);
+                }
+                actionApplied = true;
+            } catch (e) {
+                console.warn("AI 輸出的 JSON 格式有誤，已啟動防護網。", e);
+            }
+        }
+        if (!actionApplied) gameState.energy -= 5;
+        updateStatusUI();
+    }
+
+    function typewriterAppend(text, className, onComplete) {
+        const b = document.getElementById('mudChatBox');
+        const d = document.createElement('div');
+        d.className = `mud-msg ${className}`;
+        b.insertBefore(d, document.getElementById('mudLoading'));
+
+        let i = 0;
+        const speed = 25; 
+
+        function typeWriter() {
+            if (i < text.length) {
+                d.textContent = text.substring(0, i + 1) + '█';
+                i++;
+                b.scrollTop = b.scrollHeight;
+                setTimeout(typeWriter, speed);
+            } else {
+                d.innerHTML = marked.parse(text);
+                b.scrollTop = b.scrollHeight;
+                if (onComplete) onComplete();
+            }
+        }
+        typeWriter();
+    }
+
+    function startCooldownTimer(seconds = 3) {
+        const sendBtn = document.getElementById('sendBtn');
+        const input = document.getElementById('userInput');
+        let timeLeft = seconds;
+
+        sendBtn.innerText = `冷卻中 (${timeLeft})...`;
+
+        const timer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                input.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.innerText = '執行';
+                input.focus();
+            } else {
+                sendBtn.innerText = `冷卻中 (${timeLeft})...`;
+            }
+        }, 1000);
+    }
+
+    window.sendMessage = async function() {
+        const key = document.getElementById('apiKey').value.trim();
+        const input = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const modeSelected = document.getElementById('modelSelect').value;
+        const text = input.value.trim();
+
+        // 【核心修改點】消除無聲的失敗，給予明確的錯誤提示
+        if (input.disabled) return; 
+        
+        if (!text) return; // 如果沒打字按執行，維持不動作即可
+
+        if (!key) {
+            appendUI(`[系統警告：存取被拒。未偵測到神經連線憑證 (API Key)。請先在上方設定區輸入授權碼。]`, 'mud-ai', true);
+            return;
+        }
+
+        if (gameState.hp <= 0 || gameState.energy <= 0) {
+            appendUI(`[系統錯誤：生命徵象或能量已歸零，軀體無法執行指令。請點擊「格式化世界」以重生。]`, 'mud-ai', true);
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastRequestTime < THROTTLE_LIMIT) {
+            appendUI(`[系統防禦：偵測到神經突觸過熱，已攔截過快的異常連線。請等待冷卻結束。]`, 'mud-ai', true);
+            return;
+        }
+        lastRequestTime = now;
+
+        input.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.innerText = '運算中...';
+
+        const isOpenRouter = key.startsWith("sk-or");
+        
+        if (isOpenRouter && !cachedFreeModels.isFetched) {
+            document.getElementById('mudLoading').innerText = `[探測最新神經網路節點中...]`;
+            document.getElementById('mudLoading').style.display = 'block';
+            await updateOpenRouterModels();
+        }
+
+        const apiUrl = isOpenRouter ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
+        const activeModel = getSmartModel(text, isOpenRouter, modeSelected);
+
+        appendUI(text, 'mud-user');
+        input.value = '';
+
+        const loader = document.getElementById('mudLoading');
+        let platformName = isOpenRouter ? "OpenRouter" : "Groq";
+        loader.innerText = `[${platformName} - ${activeModel.split('/')[1] || activeModel.split('-')[0]} 運算中...]`;
+        loader.style.display = 'block';
+
+        messageHistory.push({
+            role: "user", 
+            content: `[Current State: ${JSON.stringify(gameState)}] 指令: ${text}${FIREWALL_SUFFIX}`
+        });
+
+        let payloadMessages = JSON.parse(JSON.stringify(messageHistory));
+        let payloadTemperature = 0.7; 
+
+        if (activeModel.includes('deepseek')) {
+            payloadTemperature = 0.6; 
+            if (payloadMessages.length > 0 && payloadMessages[0].role === 'system') {
+                payloadMessages[0].role = 'user';
+                payloadMessages[0].content = "[系統底層指令設定]\n" + payloadMessages[0].content;
+            }
+        }
+
+        const requestHeaders = {
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json"
+        };
+        if (isOpenRouter) {
+            requestHeaders["HTTP-Referer"] = window.location.href; 
+            requestHeaders["X-Title"] = "Neural Pulse MUD"; 
+        }
+
+        try {
+            let res = await fetch(apiUrl, {
+                method: "POST",
+                headers: requestHeaders,
+                body: JSON.stringify({ 
+                    model: activeModel, 
+                    messages: payloadMessages, 
+                    temperature: payloadTemperature 
+                })
+            });
+
+            if (res.status === 429 && isOpenRouter) {
+                const fallbackModel = cachedFreeModels.fallback; 
+                loader.innerText = `[主節點塞車，自動切換備援神經網路 (${fallbackModel.split('/')[1]})...]`;
+                
+                res = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: requestHeaders,
+                    body: JSON.stringify({ 
+                        model: fallbackModel, 
+                        messages: payloadMessages, 
+                        temperature: 0.7 
+                    })
+                });
+            }
+
+            if (!res.ok) {
+                if (res.status === 400) throw new Error(`ERROR [400]: 系統底層指令與模型 (${activeModel}) 不相容，請求已被拒絕。`);
+                else if (res.status === 401) throw new Error(`ERROR [401]: 授權失敗，請檢查你的 ${platformName} API Key 是否填寫正確或已失效。`);
+                else if (res.status === 402) throw new Error(`ERROR [402]: 能源信用點數耗盡 (Payment Required)！${platformName} 的免費額度可能已達上限，或帳號尚未通過平台驗證。`);
+                else if (res.status === 404) throw new Error(`ERROR [404]: 尋找不到目標神經網路 (Not Found)！你呼叫的免費模型可能已被 ${platformName} 下架、更名或暫時停用。`);
+                else if (res.status === 429) throw new Error(`ERROR [429]: ${platformName} 伺服器與備援網路全面滿載！系統已啟動強制散熱程序。`);
+                else if (res.status >= 500) throw new Error(`ERROR [${res.status}]: 遠端 AI 伺服器異常或維護中，請稍後再試。`);
+                else throw new Error(`ERROR [${res.status}]: 發生未知的資料傳輸錯誤，請重新嘗試。`);
+            }
+
+            const data = await res.json();
+            if (!data.choices || !data.choices[0]) throw new Error("ERROR: 伺服器回傳格式異常，無法解析資料。");
+
+            const aiMsg = data.choices[0].message.content;
+            applyActionDeltas(aiMsg);
+            const cleanMsg = extractTextForUI(aiMsg);
+            
+            messageHistory.push({role: "assistant", content: aiMsg});
+            
+            const MAX_ROUNDS = 3; 
+            const MAX_HISTORY_LENGTH = (MAX_ROUNDS * 2) + 1; 
+            while (messageHistory.length > MAX_HISTORY_LENGTH) messageHistory.splice(1, 2); 
+
+            loader.style.display = 'none';
+
+            typewriterAppend(cleanMsg, 'mud-ai', () => {
+                startCooldownTimer(4);
+            });
+
+        } catch (e) { 
+            loader.style.display = 'none';
+            let penaltyTime = 4; 
+            
+            if (e.message && e.message.startsWith("ERROR")) {
+                appendUI(e.message, 'mud-ai', true); 
+                if (e.message.includes("[429]") || e.message.includes("[402]")) {
+                    penaltyTime = 15;
+                    appendUI(`[系統過載保護：強制冷卻程序啟動，冷卻時間 ${penaltyTime} 秒...]`, 'mud-ai', true);
+                }
+            } else {
+                appendUI(`ERROR: 無法連線至 ${platformName}，請檢查你的網路狀態或跨網域 (CORS) 阻擋。`, 'mud-ai', true); 
+                console.error(e);
+            }
+            
+            messageHistory.pop();
+            startCooldownTimer(penaltyTime);
+        }
+    };
+
+    window.saveGame = function() {
+        const data = { state: gameState, history: messageHistory.filter(m => m.role !== 'system') };
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `NEURAL_MUD_SAVE.json`;
+        a.click();
+    };
+
+    window.loadGame = function(e) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const d = JSON.parse(event.target.result);
+                gameState = d.state;
+                messageHistory = [{ role: "system", content: "" }, ...d.history];
+                updateCoreMemory(); 
+                renderAll();
+                updateStatusUI();
+            } catch(err) { alert("讀取存檔失敗"); }
+        };
+        reader.readAsText(file);
+    };
+
+    function renderAll() {
+        const box = document.getElementById('mudChatBox');
+        box.innerHTML = '<div class="mud-loading" id="mudLoading">連線中...</div>';
+        messageHistory.forEach(m => {
+            if (m.role === 'user') {
+                let cleanUserText = m.content.split('] 指令: ')[1] || m.content;
+                cleanUserText = cleanUserText.replace(FIREWALL_SUFFIX, '');
+                appendUI(cleanUserText, 'mud-user');
+            }
+            if (m.role === 'assistant') {
+                appendUI(marked.parse(extractTextForUI(m.content)), 'mud-ai', true);
+            }
+        });
+    }
+
+    function appendUI(t, c, html=false) {
+        const b = document.getElementById('mudChatBox');
+        const d = document.createElement('div');
+        d.className = `mud-msg ${c}`;
+        html ? d.innerHTML = t : d.textContent = t;
+        b.insertBefore(d, document.getElementById('mudLoading'));
+        b.scrollTop = b.scrollHeight;
+    }
+
+    window.handleKeyPress = (e) => { 
+        if(e.key === 'Enter') {
+            const sendBtn = document.getElementById('sendBtn');
+            if (!sendBtn.disabled) sendMessage(); 
+        }
+    };
+    
+    window.clearHistory = () => { 
+        const warningText = "這將格式化整個人格磁軌 \n確定執行嗎 (Yes/No)";
+        if(confirm(warningText)) { 
+            location.reload(); 
+        } 
+    };
+
+    const savedKey = localStorage.getItem('mud_api_key') || localStorage.getItem('mud_groq_key') || '';
+    document.getElementById('apiKey').value = savedKey;
+    document.getElementById('modelSelect').value = localStorage.getItem('mud_model_mode') || 'auto';
+    
+    updateCoreMemory(); 
+    updateStatusUI();
+
+})();
