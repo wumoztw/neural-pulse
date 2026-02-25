@@ -56,21 +56,17 @@
         }
     };
 
-    // 【核心升級】自動根據 API Key 平台與使用者輸入，挑選最佳免費模型
     function getSmartModel(userInput, isOpenRouter, modeSelected) {
         const complexKeywords = ["打", "攻擊", "開火", "破解", "分析", "解謎", "密碼", "駭入", "戰鬥", "算", "fight", "hack"];
         const isComplex = complexKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
         
         if (modeSelected === "auto") {
             if (isOpenRouter) {
-                // OpenRouter 上的頂尖免費模型
                 return isComplex ? "deepseek/deepseek-r1:free" : "meta-llama/llama-3.3-70b-instruct:free";
             } else {
-                // Groq 上的免費模型
                 return isComplex ? "deepseek-r1-distill-llama-70b" : "llama-3.3-70b-versatile";
             }
         } else {
-            // 強制 DeepSeek 模式
             return isOpenRouter ? "deepseek/deepseek-r1:free" : "deepseek-r1-distill-llama-70b";
         }
     }
@@ -181,7 +177,6 @@
         sendBtn.disabled = true;
         sendBtn.innerText = '運算中...';
 
-        // 【核心升級】根據 API Key 特徵判斷要連線到哪裡
         const isOpenRouter = key.startsWith("sk-or");
         const apiUrl = isOpenRouter ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
         const activeModel = getSmartModel(text, isOpenRouter, modeSelected);
@@ -190,7 +185,6 @@
         input.value = '';
 
         const loader = document.getElementById('mudLoading');
-        // 顯示出目前是哪個平台與模型接管運算
         let platformName = isOpenRouter ? "OpenRouter" : "Groq";
         loader.innerText = `[${platformName} - ${activeModel.split('/')[1] || activeModel.split('-')[0]} 運算中...]`;
         loader.style.display = 'block';
@@ -211,18 +205,17 @@
             }
         }
 
-        // 動態設定 Headers (OpenRouter 需要額外的 Header 才能獲得最佳免費體驗)
         const requestHeaders = {
             "Authorization": `Bearer ${key}`,
             "Content-Type": "application/json"
         };
         if (isOpenRouter) {
-            requestHeaders["HTTP-Referer"] = window.location.href; // OpenRouter 規定
-            requestHeaders["X-Title"] = "Neural Pulse MUD"; // 讓 OpenRouter 識別專案
+            requestHeaders["HTTP-Referer"] = window.location.href; 
+            requestHeaders["X-Title"] = "Neural Pulse MUD"; 
         }
 
         try {
-            const res = await fetch(apiUrl, {
+            let res = await fetch(apiUrl, {
                 method: "POST",
                 headers: requestHeaders,
                 body: JSON.stringify({ 
@@ -232,10 +225,27 @@
                 })
             });
 
+            // 【第一性原理防護升級：無縫自動備援切換 (Auto-Fallback)】
+            // 如果第一時間收到 OpenRouter 的 429 客滿錯誤，立刻啟用 Google Gemma 輕量免費模型備援
+            if (res.status === 429 && isOpenRouter) {
+                const fallbackModel = "google/gemma-2-9b-it:free"; 
+                loader.innerText = `[主節點塞車，自動切換備援神經網路...]`;
+                
+                res = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: requestHeaders,
+                    body: JSON.stringify({ 
+                        model: fallbackModel, 
+                        messages: payloadMessages, 
+                        temperature: 0.7 
+                    })
+                });
+            }
+
             if (!res.ok) {
                 if (res.status === 400) throw new Error(`ERROR [400]: 系統底層指令與模型 (${activeModel}) 不相容，請求已被拒絕。`);
                 else if (res.status === 401) throw new Error(`ERROR [401]: 授權失敗，請檢查你的 ${platformName} API Key 是否填寫正確或已失效。`);
-                else if (res.status === 429) throw new Error(`ERROR [429]: ${platformName} 伺服器連線過載！系統已啟動強制散熱程序。`);
+                else if (res.status === 429) throw new Error(`ERROR [429]: ${platformName} 伺服器與備援網路全面滿載！系統已啟動強制散熱程序。`);
                 else if (res.status >= 500) throw new Error(`ERROR [${res.status}]: 遠端 AI 伺服器異常或維護中，請稍後再試。`);
                 else throw new Error(`ERROR [${res.status}]: 發生未知的資料傳輸錯誤，請重新嘗試。`);
             }
@@ -342,7 +352,6 @@
         } 
     };
 
-    // 啟動時讀取存好的設定，並向下相容舊版的 Groq Key
     const savedKey = localStorage.getItem('mud_api_key') || localStorage.getItem('mud_groq_key') || '';
     document.getElementById('apiKey').value = savedKey;
     document.getElementById('modelSelect').value = localStorage.getItem('mud_model_mode') || 'auto';
