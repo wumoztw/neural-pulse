@@ -17,14 +17,14 @@
         「歡迎連線，獵人，這裡是現實的終點，也是資料的起點。」
     </p>
     <p>
-        在 2088 年的「大崩潰」後，地表已淪為一片死寂的霓虹廢土，你的意識現在正跳轉進入這台鏽跡斑斑的終端機，試圖在混亂的資料流中尋找生存的意義。本系統由兩大 AI 神經網路主導感知的 <strong>Llama</strong> 與主導邏輯的 <strong>DeepSeek</strong> 共同維繫，請先到 GROQ 申請免費的 API Key：
-        <a href="https://console.groq.com/keys" target="_blank" style="color: #00ff41; text-decoration: underline; font-weight: bold;">
-            https://console.groq.com/keys
-        </a>
+        在 2088 年的「大崩潰」後，地表已淪為一片死寂的霓虹廢土，你的意識現在正跳轉進入這台鏽跡斑斑的終端機，試圖在混亂的資料流中尋找生存的意義。本系統由兩大 AI 神經網路主導感知的 <strong>Llama</strong> 與主導邏輯的 <strong>DeepSeek</strong> 共同維繫。<br>
+        <span style="color: #00ff41;">▶ 請申請免費的 API Key 以連線 (建議使用 OpenRouter)：</span><br>
+        OpenRouter (額度高): <a href="https://openrouter.ai/keys" target="_blank" style="color: #00ff41; text-decoration: underline; font-weight: bold;">https://openrouter.ai/keys</a><br>
+        Groq (速度快): <a href="https://console.groq.com/keys" target="_blank" style="color: #00ff41; text-decoration: underline;">https://console.groq.com/keys</a>
     </p>
     <h4 style="color: #00ff41; margin-bottom: 5px;">📍 新手任務：初步同步 (Initial Sync)</h4>
     <ul style="list-style-type: square; margin-left: 20px; color: #f1c40f;">
-        <li><strong>取得授權</strong>：在下方欄位輸入你的 Groq API Key 以建立神經連線。</li>
+        <li><strong>取得授權</strong>：在下方欄位輸入你的 API Key，系統會自動辨識平台並挑選最佳免費模型。</li>
         <li><strong>環境偵測</strong>：在指令列輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">查看四周</span>，確認你所在的避難所狀況。</li>
         <li><strong>資源管理</strong>：嘗試移動或探索，並留意上方狀態列的 ⚡ Energy (能量) 消耗。</li>
         <li><strong>邏輯測試</strong>：若遭遇電子鎖，請嘗試輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">破解終端機</span> 觸發 DeepSeek 的邏輯運算。</li>
@@ -52,10 +52,10 @@
         </div>
         <div class="mud-settings">
             <div class="mud-row">
-                <input type="password" id="groqKey" placeholder="Groq API Key" onchange="saveConfig()">
+                <input type="password" id="apiKey" placeholder="貼上 OpenRouter 或 Groq API Key" onchange="saveConfig()">
                 <select id="modelSelect" onchange="saveConfig()">
-                    <option value="llama-3.3-70b-versatile">自動偵測 (建議模式)</option>
-                    <option value="deepseek-r1-distill-llama-70b">強制 DeepSeek R1 (極限邏輯)</option>
+                    <option value="auto">自動切換最佳免費模型 (建議)</option>
+                    <option value="force-deepseek">強制全局使用 DeepSeek R1 (極限邏輯)</option>
                 </select>
             </div>
             <div class="mud-row">
