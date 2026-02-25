@@ -195,10 +195,9 @@
         const modeSelected = document.getElementById('modelSelect').value;
         const text = input.value.trim();
 
-        // 【核心修改點】消除無聲的失敗，給予明確的錯誤提示
         if (input.disabled) return; 
         
-        if (!text) return; // 如果沒打字按執行，維持不動作即可
+        if (!text) return; 
 
         if (!key) {
             appendUI(`[系統警告：存取被拒。未偵測到神經連線憑證 (API Key)。請先在上方設定區輸入授權碼。]`, 'mud-ai', true);
@@ -409,5 +408,14 @@
     
     updateCoreMemory(); 
     updateStatusUI();
+
+    // 【新增功能】一開始遊戲時給予玩家的 UI 新手引導 (純前端顯示，不佔用 Token)
+    const welcomeHtml = `
+        <strong style="color: #00ff41;">[系統提示：神經連線建立成功]</strong><br><br>
+        新手獵人，歡迎來到廢土。在開始行動前，建議你可以先嘗試以下指令：<br><br>
+        <span style="color: #f1c40f;">👉 輸入「觀察四周」</span>：了解你身處的環境。<br>
+        <span style="color: #f1c40f;">👉 輸入「檢查身上物品」</span>：確認你目前擁有的裝備與物資。
+    `;
+    appendUI(welcomeHtml, 'mud-ai', true);
 
 })();
