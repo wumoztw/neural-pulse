@@ -28,6 +28,45 @@
     let lastRequestTime = 0; 
     const THROTTLE_LIMIT = 4000; 
 
+    // 【核心升級 1】建立動態模型快取庫，預設放入已知的好模型作為底線防護
+    let cachedFreeModels = {
+        versatile: "meta-llama/llama-3.3-70b-instruct:free", 
+        complex: "deepseek/deepseek-r1:free",
+        fallback: "google/gemma-2-9b-it:free",
+        isFetched: false
+    };
+
+    // 【核心升級 2】自動透過網路探測 OpenRouter 最新的免費模型清單
+    async function updateOpenRouterModels() {
+        if (cachedFreeModels.isFetched) return;
+        try {
+            const res = await fetch("https://openrouter.ai/api/v1/models");
+            const data = await res.json();
+            
+            // 篩選出所有標記為免費的模型
+            const freeModels = data.data.filter(m => m.id.endsWith(':free'));
+            
+            if (freeModels.length > 0) {
+                // 智慧配對：尋找最佳的邏輯大腦 (優先找 deepseek)
+                const dsModel = freeModels.find(m => m.id.includes('deepseek'));
+                cachedFreeModels.complex = dsModel ? dsModel.id : freeModels[0].id; // 找不到就隨便抓一個免費的頂替
+
+                // 智慧配對：尋找最佳的感知大腦 (優先找 llama 70b，退而求其次找任何 llama)
+                const llamaModel = freeModels.find(m => m.id.includes('llama') && m.id.includes('70b')) || freeModels.find(m => m.id.includes('llama'));
+                cachedFreeModels.versatile = llamaModel ? llamaModel.id : freeModels[freeModels.length - 1].id;
+
+                // 智慧配對：尋找備援大腦 (優先找 gemma，作為塞車時的逃生艙)
+                const gemmaModel = freeModels.find(m => m.id.includes('gemma'));
+                cachedFreeModels.fallback = gemmaModel ? gemmaModel.id : freeModels[Math.floor(freeModels.length / 2)].id;
+                
+                cachedFreeModels.isFetched = true;
+                console.log("✅ 已自動更新並掛載最新免費模型陣列:", cachedFreeModels);
+            }
+        } catch(e) {
+            console.warn("⚠️ 無法取得最新模型清單，將維持使用預設保底模型。", e);
+        }
+    }
+
     function updateCoreMemory() {
         const coreMemoryText = `\n\n【核心記憶區 (Core Memory)】\n玩家目前狀態: HP ${gameState.hp}, 能量 ${gameState.energy}\n當前位置: ${gameState.location}\n持有物品: ${gameState.inventory.join(', ') || '無'}`;
         if (messageHistory.length === 0) {
@@ -56,18 +95,19 @@
         }
     };
 
+    // 【核心升級 3】模型路由改為讀取動態快取庫
     function getSmartModel(userInput, isOpenRouter, modeSelected) {
         const complexKeywords = ["打", "攻擊", "開火", "破解", "分析", "解謎", "密碼", "駭入", "戰鬥", "算", "fight", "hack"];
         const isComplex = complexKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
         
         if (modeSelected === "auto") {
             if (isOpenRouter) {
-                return isComplex ? "deepseek/deepseek-r1:free" : "meta-llama/llama-3.3-70b-instruct:free";
+                return isComplex ? cachedFreeModels.complex : cachedFreeModels.versatile;
             } else {
                 return isComplex ? "deepseek-r1-distill-llama-70b" : "llama-3.3-70b-versatile";
             }
         } else {
-            return isOpenRouter ? "deepseek/deepseek-r1:free" : "deepseek-r1-distill-llama-70b";
+            return isOpenRouter ? cachedFreeModels.complex : "deepseek-r1-distill-llama-70b";
         }
     }
 
@@ -78,10 +118,8 @@
         clean = clean.replace(/\??action\s*\{[\s\S]*?\}/gi, '');
         clean = clean.replace(/\{[\s\S]*?"hp_delta"[\s\S]*?\}/gi, '');
         clean = clean.replace(/```json/gi, '').replace(/```/gi, '');
-        
         clean = clean.replace(/[\n\s]*\$[\s]*$/g, '');
         clean = clean.replace(/[\n\s]*>[\s]*$/g, '');
-        
         return clean.trim();
     }
 
@@ -96,267 +134,4 @@
                 
                 if (typeof action.hp_delta === 'number') gameState.hp += action.hp_delta;
                 if (typeof action.energy_delta === 'number') gameState.energy += action.energy_delta;
-                if (action.location && action.location !== "null") gameState.location = action.location;
-                if (action.item_added && action.item_added !== "null" && !gameState.inventory.includes(action.item_added)) {
-                    gameState.inventory.push(action.item_added);
-                }
-                if (action.item_removed && action.item_removed !== "null") {
-                    gameState.inventory = gameState.inventory.filter(item => item !== action.item_removed);
-                }
-                actionApplied = true;
-            } catch (e) {
-                console.warn("AI 輸出的 JSON 格式有誤，已啟動防護網。", e);
-            }
-        }
-        if (!actionApplied) gameState.energy -= 5;
-        updateStatusUI();
-    }
-
-    function typewriterAppend(text, className, onComplete) {
-        const b = document.getElementById('mudChatBox');
-        const d = document.createElement('div');
-        d.className = `mud-msg ${className}`;
-        b.insertBefore(d, document.getElementById('mudLoading'));
-
-        let i = 0;
-        const speed = 25; 
-
-        function typeWriter() {
-            if (i < text.length) {
-                d.textContent = text.substring(0, i + 1) + '█';
-                i++;
-                b.scrollTop = b.scrollHeight;
-                setTimeout(typeWriter, speed);
-            } else {
-                d.innerHTML = marked.parse(text);
-                b.scrollTop = b.scrollHeight;
-                if (onComplete) onComplete();
-            }
-        }
-        typeWriter();
-    }
-
-    function startCooldownTimer(seconds = 3) {
-        const sendBtn = document.getElementById('sendBtn');
-        const input = document.getElementById('userInput');
-        let timeLeft = seconds;
-
-        sendBtn.innerText = `冷卻中 (${timeLeft})...`;
-
-        const timer = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                input.disabled = false;
-                sendBtn.disabled = false;
-                sendBtn.innerText = '執行';
-                input.focus();
-            } else {
-                sendBtn.innerText = `冷卻中 (${timeLeft})...`;
-            }
-        }, 1000);
-    }
-
-    window.sendMessage = async function() {
-        const key = document.getElementById('apiKey').value.trim();
-        const input = document.getElementById('userInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const modeSelected = document.getElementById('modelSelect').value;
-        const text = input.value.trim();
-
-        if (!key || !text || gameState.hp <= 0 || input.disabled) return;
-
-        const now = Date.now();
-        if (now - lastRequestTime < THROTTLE_LIMIT) {
-            appendUI(`[系統防禦：偵測到神經突觸過熱，已攔截過快的異常連線。請等待冷卻結束。]`, 'mud-ai', true);
-            return;
-        }
-        lastRequestTime = now;
-
-        input.disabled = true;
-        sendBtn.disabled = true;
-        sendBtn.innerText = '運算中...';
-
-        const isOpenRouter = key.startsWith("sk-or");
-        const apiUrl = isOpenRouter ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
-        const activeModel = getSmartModel(text, isOpenRouter, modeSelected);
-
-        appendUI(text, 'mud-user');
-        input.value = '';
-
-        const loader = document.getElementById('mudLoading');
-        let platformName = isOpenRouter ? "OpenRouter" : "Groq";
-        loader.innerText = `[${platformName} - ${activeModel.split('/')[1] || activeModel.split('-')[0]} 運算中...]`;
-        loader.style.display = 'block';
-
-        messageHistory.push({
-            role: "user", 
-            content: `[Current State: ${JSON.stringify(gameState)}] 指令: ${text}${FIREWALL_SUFFIX}`
-        });
-
-        let payloadMessages = JSON.parse(JSON.stringify(messageHistory));
-        let payloadTemperature = 0.7; 
-
-        if (activeModel.includes('deepseek')) {
-            payloadTemperature = 0.6; 
-            if (payloadMessages.length > 0 && payloadMessages[0].role === 'system') {
-                payloadMessages[0].role = 'user';
-                payloadMessages[0].content = "[系統底層指令設定]\n" + payloadMessages[0].content;
-            }
-        }
-
-        const requestHeaders = {
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json"
-        };
-        if (isOpenRouter) {
-            requestHeaders["HTTP-Referer"] = window.location.href; 
-            requestHeaders["X-Title"] = "Neural Pulse MUD"; 
-        }
-
-        try {
-            let res = await fetch(apiUrl, {
-                method: "POST",
-                headers: requestHeaders,
-                body: JSON.stringify({ 
-                    model: activeModel, 
-                    messages: payloadMessages, 
-                    temperature: payloadTemperature 
-                })
-            });
-
-            // 【第一性原理防護升級：無縫自動備援切換 (Auto-Fallback)】
-            // 如果第一時間收到 OpenRouter 的 429 客滿錯誤，立刻啟用 Google Gemma 輕量免費模型備援
-            if (res.status === 429 && isOpenRouter) {
-                const fallbackModel = "google/gemma-2-9b-it:free"; 
-                loader.innerText = `[主節點塞車，自動切換備援神經網路...]`;
-                
-                res = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: requestHeaders,
-                    body: JSON.stringify({ 
-                        model: fallbackModel, 
-                        messages: payloadMessages, 
-                        temperature: 0.7 
-                    })
-                });
-            }
-
-            if (!res.ok) {
-                if (res.status === 400) throw new Error(`ERROR [400]: 系統底層指令與模型 (${activeModel}) 不相容，請求已被拒絕。`);
-                else if (res.status === 401) throw new Error(`ERROR [401]: 授權失敗，請檢查你的 ${platformName} API Key 是否填寫正確或已失效。`);
-                else if (res.status === 429) throw new Error(`ERROR [429]: ${platformName} 伺服器與備援網路全面滿載！系統已啟動強制散熱程序。`);
-                else if (res.status >= 500) throw new Error(`ERROR [${res.status}]: 遠端 AI 伺服器異常或維護中，請稍後再試。`);
-                else throw new Error(`ERROR [${res.status}]: 發生未知的資料傳輸錯誤，請重新嘗試。`);
-            }
-
-            const data = await res.json();
-            if (!data.choices || !data.choices[0]) throw new Error("ERROR: 伺服器回傳格式異常，無法解析資料。");
-
-            const aiMsg = data.choices[0].message.content;
-            applyActionDeltas(aiMsg);
-            const cleanMsg = extractTextForUI(aiMsg);
-            
-            messageHistory.push({role: "assistant", content: aiMsg});
-            
-            const MAX_ROUNDS = 3; 
-            const MAX_HISTORY_LENGTH = (MAX_ROUNDS * 2) + 1; 
-            while (messageHistory.length > MAX_HISTORY_LENGTH) messageHistory.splice(1, 2); 
-
-            loader.style.display = 'none';
-
-            typewriterAppend(cleanMsg, 'mud-ai', () => {
-                startCooldownTimer(4);
-            });
-
-        } catch (e) { 
-            loader.style.display = 'none';
-            let penaltyTime = 4; 
-            
-            if (e.message && e.message.startsWith("ERROR")) {
-                appendUI(e.message, 'mud-ai', true); 
-                if (e.message.includes("[429]")) {
-                    penaltyTime = 15;
-                    appendUI(`[系統過載保護：強制冷卻程序啟動，冷卻時間 ${penaltyTime} 秒...]`, 'mud-ai', true);
-                }
-            } else {
-                appendUI(`ERROR: 無法連線至 ${platformName}，請檢查你的網路狀態或跨網域 (CORS) 阻擋。`, 'mud-ai', true); 
-                console.error(e);
-            }
-            
-            messageHistory.pop();
-            startCooldownTimer(penaltyTime);
-        }
-    };
-
-    window.saveGame = function() {
-        const data = { state: gameState, history: messageHistory.filter(m => m.role !== 'system') };
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `NEURAL_MUD_SAVE.json`;
-        a.click();
-    };
-
-    window.loadGame = function(e) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                const d = JSON.parse(event.target.result);
-                gameState = d.state;
-                messageHistory = [{ role: "system", content: "" }, ...d.history];
-                updateCoreMemory(); 
-                renderAll();
-                updateStatusUI();
-            } catch(err) { alert("讀取存檔失敗"); }
-        };
-        reader.readAsText(file);
-    };
-
-    function renderAll() {
-        const box = document.getElementById('mudChatBox');
-        box.innerHTML = '<div class="mud-loading" id="mudLoading">連線中...</div>';
-        messageHistory.forEach(m => {
-            if (m.role === 'user') {
-                let cleanUserText = m.content.split('] 指令: ')[1] || m.content;
-                cleanUserText = cleanUserText.replace(FIREWALL_SUFFIX, '');
-                appendUI(cleanUserText, 'mud-user');
-            }
-            if (m.role === 'assistant') {
-                appendUI(marked.parse(extractTextForUI(m.content)), 'mud-ai', true);
-            }
-        });
-    }
-
-    function appendUI(t, c, html=false) {
-        const b = document.getElementById('mudChatBox');
-        const d = document.createElement('div');
-        d.className = `mud-msg ${c}`;
-        html ? d.innerHTML = t : d.textContent = t;
-        b.insertBefore(d, document.getElementById('mudLoading'));
-        b.scrollTop = b.scrollHeight;
-    }
-
-    window.handleKeyPress = (e) => { 
-        if(e.key === 'Enter') {
-            const sendBtn = document.getElementById('sendBtn');
-            if (!sendBtn.disabled) sendMessage(); 
-        }
-    };
-    
-    window.clearHistory = () => { 
-        const warningText = "這將格式化整個人格磁軌 \n確定執行嗎 (Yes/No)";
-        if(confirm(warningText)) { 
-            location.reload(); 
-        } 
-    };
-
-    const savedKey = localStorage.getItem('mud_api_key') || localStorage.getItem('mud_groq_key') || '';
-    document.getElementById('apiKey').value = savedKey;
-    document.getElementById('modelSelect').value = localStorage.getItem('mud_model_mode') || 'auto';
-    
-    updateCoreMemory(); 
-    updateStatusUI();
-
-})();
+                if (action.location && action.location !== "null") gameState.location = action
