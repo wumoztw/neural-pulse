@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神經脈衝：賽博廢土 2.0 (Neural Pulse)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<div style="padding: 20px; border: 1px dashed #00ff41; background: #111; color: #eee; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; margin-bottom: 20px; line-height: 1.8; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <h3 style="color: #e67e22; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">
+        🌑 連線啟動：神經脈衝 (Neural Pulse)
+    </h3>
+    <p style="font-style: italic; color: #bbb;">
+        「歡迎連線，獵人，這裡是現實的終點，也是資料的起點。」
+    </p>
+    <p>
+        在 2088 年的「大崩潰」後，地表已淪為一片死寂的霓虹廢土，你的意識現在正跳轉進入這台鏽跡斑斑的終端機，試圖在混亂的資料流中尋找生存的意義。本系統由兩大 AI 神經網路主導感知的 <strong>Llama</strong> 與主導邏輯的 <strong>DeepSeek</strong> 共同維繫，請先到 GROQ 申請免費的 API Key：
+        <a href="https://console.groq.com/keys" target="_blank" style="color: #00ff41; text-decoration: underline; font-weight: bold;">
+            https://console.groq.com/keys
+        </a>
+    </p>
+    <h4 style="color: #00ff41; margin-bottom: 5px;">📍 新手任務：初步同步 (Initial Sync)</h4>
+    <ul style="list-style-type: square; margin-left: 20px; color: #f1c40f;">
+        <li><strong>取得授權</strong>：在下方欄位輸入你的 Groq API Key 以建立神經連線。</li>
+        <li><strong>環境偵測</strong>：在指令列輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">查看四周</span>，確認你所在的避難所狀況。</li>
+        <li><strong>資源管理</strong>：嘗試移動或探索，並留意上方狀態列的 ⚡ Energy (能量) 消耗。</li>
+        <li><strong>邏輯測試</strong>：若遭遇電子鎖，請嘗試輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">破解終端機</span> 觸發 DeepSeek 的邏輯運算。</li>
+    </ul>
+    <p style="font-size: 0.9em; color: #888; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+        ※ 提醒：這是一個高難度生存世界。能量耗盡或生命值歸零將導致連線永久斷開，屆時請點擊「格式化世界」重新初始化人格。
+    </p>
+</div>
+
+<div id="mud-app-root" style="max-width: 800px; margin: 0 auto;">
+    <div class="mud-container">
+        <div class="mud-header" style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.4; padding: 20px 10px; background: #1a1a1a; border-bottom: 2px solid #00ff41;">
+            <span style="color: #e67e22; font-size: 1.3em; font-weight: bold; letter-spacing: 2px;">《神經脈衝：賽博廢土 2.0》</span>
+            <span style="color: #00ff41; font-size: 0.9em; letter-spacing: 1px;">(Neural Pulse: Cyber Wasteland)</span>
+        </div>
+        
+        <div class="mud-intro-section" style="padding: 15px; background: #111; border-bottom: 1px solid #333; font-size: 13px; color: #bbb; line-height: 1.6;">
+            <strong style="color: #00ff41; font-size: 15px;">【高難度模式：神經網路同步中】</strong><br>
+            系統已啟動動態運算。一般互動將由 Llama 處理，戰鬥與解謎時，DeepSeek R1 將接管邏輯核心。請注意：你的資源 (Energy) 會隨時間與行動枯竭，死亡將導致資料崩潰。
+        </div>
+        <div class="mud-status-bar" id="mudStatusBar">
+            <div class="mud-status-item">❤️ HP: <span id="hpVal" class="mud-val">100</span></div>
+            <div class="mud-status-item">⚡ En: <span id="enVal" class="mud-val">100</span></div>
+            <div class="mud-status-item">📍 Loc: <span id="locVal" class="mud-val">起始點</span></div>
+        </div>
+        <div class="mud-settings">
+            <div class="mud-row">
+                <input type="password" id="groqKey" placeholder="Groq API Key" onchange="saveConfig()">
+                <select id="modelSelect" onchange="saveConfig()">
+                    <option value="llama-3.3-70b-versatile">自動偵測 (建議模式)</option>
+                    <option value="deepseek-r1-distill-llama-70b">強制 DeepSeek R1 (極限邏輯)</option>
+                </select>
+            </div>
+            <div class="mud-row">
+                <button class="mud-btn mud-btn-save" onclick="saveGame()">💾 下載存檔</button>
+                <button class="mud-btn mud-btn-load" onclick="document.getElementById('fileInput').click()">📂 讀取進度</button>
+                <button class="mud-btn mud-btn-clear" onclick="clearHistory()">💀 格式化世界</button>
+                <input type="file" id="fileInput" style="display:none" onchange="loadGame(event)">
+            </div>
+        </div>
+        <div class="mud-chat-box" id="mudChatBox">
+            <div class="mud-loading" id="mudLoading">系統神經元連線中...</div>
+        </div>
+        <div class="mud-input-area">
+            <input type="text" id="userInput" placeholder="攻擊/破解/觀察/對話..." onkeypress="handleKeyPress(event)">
+            <button id="sendBtn" onclick="sendMessage()">執行</button>
+        </div>
+    </div>
+</div>
+
+<script src="game.js"></script>
+
+</body>
+</html>
