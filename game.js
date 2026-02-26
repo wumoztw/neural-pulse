@@ -485,5 +485,7 @@
         <span style="color: var(--neon-orange);">👉 輸入「檢查身上物品」</span>：確認你目前擁有的裝備與物資。
     `;
     appendUI(welcomeHtml, 'mud-ai', true);
+    const loadingEl = document.getElementById('mudLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
 
 })();
