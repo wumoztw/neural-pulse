@@ -5,72 +5,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>神經脈衝：賽博廢土 2.0 (Neural Pulse)</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
-<div style="padding: 20px; border: 1px dashed #00ff41; background: #111; color: #eee; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; margin-bottom: 20px; line-height: 1.8; max-width: 800px; margin-left: auto; margin-right: auto;">
-    <h3 style="color: #e67e22; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">
-        🌑 連線啟動：神經脈衝 (Neural Pulse)
+<div class="tutorial-section">
+    <h3 style="color: var(--neon-orange); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-weight: 900; letter-spacing: 1px;">
+        🌑 神經同步連線：NEURAL PULSE
     </h3>
-    <p style="font-style: italic; color: #bbb;">
-        「歡迎連線，獵人，這裡是現實的終點，也是資料的起點。」
+    <p style="font-style: italic; color: #888; font-size: 0.9rem;">
+        「歡迎進入 2088 年的邊緣資料流，獵人。」
     </p>
-    <p>
-        在 2088 年的「大崩潰」後，地表已淪為一片死寂的霓虹廢土，你的意識現在正跳轉進入這台鏽跡斑斑的終端機，試圖在混亂的資料流中尋找生存的意義。本系統由兩大 AI 神經網路主導感知的 <strong>Llama</strong> 與主導邏輯的 <strong>DeepSeek</strong> 共同維繫。<br>
-        <span style="color: #00ff41;">▶ 請申請免費的 API Key 以連線 (建議使用 OpenRouter)：</span><br>
-        OpenRouter (額度高): <a href="https://openrouter.ai/keys" target="_blank" style="color: #00ff41; text-decoration: underline; font-weight: bold;">https://openrouter.ai/keys</a><br>
-        Groq (速度快): <a href="https://console.groq.com/keys" target="_blank" style="color: #00ff41; text-decoration: underline;">https://console.groq.com/keys</a>
+    <p style="font-size: 0.95rem;">
+        地表已淪為霓虹廢土，你的意識已被切換至這台加密終端機。本系統由 <strong>Llama</strong> (感知) 與 <strong>DeepSeek</strong> (邏輯) 兩大神經網路共同維繫。<br>
+        <span class="text-neon">▶ 建議連線憑證：</span><br>
+        <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--neon-green); text-decoration: none; font-weight: bold; border-bottom: 1px dashed var(--border-color);">OpenRouter.ai (取得 API Key)</a>
     </p>
-    <h4 style="color: #00ff41; margin-bottom: 5px;">📍 新手任務：初步同步 (Initial Sync)</h4>
-    <ul style="list-style-type: square; margin-left: 20px; color: #f1c40f;">
-        <li><strong>取得授權</strong>：在下方欄位輸入你的 API Key，系統會自動辨識平台並挑選最佳免費模型。</li>
-        <li><strong>環境偵測</strong>：在指令列輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">查看四周</span>，確認你所在的避難所狀況。</li>
-        <li><strong>資源管理</strong>：嘗試移動或探索，並留意上方狀態列的 ⚡ Energy (能量) 消耗。</li>
-        <li><strong>邏輯測試</strong>：若遭遇電子鎖，請嘗試輸入 <span style="color: #fff; background: #333; padding: 2px 5px;">破解終端機</span> 觸發 DeepSeek 的邏輯運算。</li>
-    </ul>
-    <p style="font-size: 0.9em; color: #888; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
-        ※ 提醒：這是一個高難度生存世界。能量耗盡或生命值歸零將導致連線永久斷開，屆時請點擊「格式化世界」重新初始化人格。
-    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 2px solid var(--neon-green);">
+            <div style="font-size: 0.8rem; color: var(--neon-green); margin-bottom: 5px; font-weight: bold;">[ 環境偵測 ]</div>
+            <div style="font-size: 0.85rem; color: #ccc;">輸入「觀察四周」了解所在的地點。</div>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 2px solid var(--neon-orange);">
+            <div style="font-size: 0.8rem; color: var(--neon-orange); margin-bottom: 5px; font-weight: bold;">[ 能源管理 ]</div>
+            <div style="font-size: 0.85rem; color: #ccc;">留意⚡ En (能量) 消耗，歸零即斷線。</div>
+        </div>
+    </div>
 </div>
 
-<div id="mud-app-root" style="max-width: 800px; margin: 0 auto;">
+<div id="mud-app-root">
     <div class="mud-container">
-        <div class="mud-header" style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.4; padding: 20px 10px; background: #1a1a1a; border-bottom: 2px solid #00ff41;">
-            <span style="color: #e67e22; font-size: 1.3em; font-weight: bold; letter-spacing: 2px;">《神經脈衝：賽博廢土 2.0》</span>
-            <span style="color: #00ff41; font-size: 0.9em; letter-spacing: 1px;">(Neural Pulse: Cyber Wasteland)</span>
+        <!-- 標題欄 -->
+        <div class="mud-header">
+            <div class="mud-title-main">NEURAL PULSE</div>
+            <div class="mud-title-sub">CYBER WASTELAND SYSTEM v2.5.0</div>
         </div>
-        
-        <div class="mud-intro-section" style="padding: 15px; background: #111; border-bottom: 1px solid #333; font-size: 13px; color: #bbb; line-height: 1.6;">
-            <strong style="color: #00ff41; font-size: 15px;">【高難度模式：神經網路同步中】</strong><br>
-            系統已啟動動態運算。一般互動將由 Llama 處理，戰鬥與解謎時，DeepSeek R1 將接管邏輯核心。請注意：你的資源 (Energy) 會隨時間與行動枯竭，死亡將導致資料崩潰。
-        </div>
+
+        <!-- 狀態欄 -->
         <div class="mud-status-bar" id="mudStatusBar">
-            <div class="mud-status-item">❤️ HP: <span id="hpVal" class="mud-val">100</span></div>
-            <div class="mud-status-item">⚡ En: <span id="enVal" class="mud-val">100</span></div>
-            <div class="mud-status-item">📍 Loc: <span id="locVal" class="mud-val">起始點</span></div>
+            <div class="mud-status-item">
+                <span style="color: var(--neon-red);">❤️ HP</span>
+                <div class="mud-val-container">
+                    <div id="hpBar" class="mud-progress progress-hp" style="width: 100%;"></div>
+                </div>
+                <span id="hpVal" class="mud-val">100</span>
+            </div>
+            <div class="mud-status-item">
+                <span style="color: var(--neon-blue);">⚡ EN</span>
+                <div class="mud-val-container">
+                    <div id="enBar" class="mud-progress progress-en" style="width: 100%;"></div>
+                </div>
+                <span id="enVal" class="mud-val">100</span>
+            </div>
+            <div class="mud-status-item">
+                <span class="location-tag" id="locVal">初始化中...</span>
+            </div>
         </div>
+
+        <!-- 設定欄 -->
         <div class="mud-settings">
             <div class="mud-row">
-                <input type="password" id="apiKey" placeholder="貼上 OpenRouter 或 Groq API Key" onchange="saveConfig()">
+                <input type="password" id="apiKey" placeholder="AUTH_KEY (OpenRouter/Groq)" onchange="saveConfig()">
                 <select id="modelSelect" onchange="saveConfig()">
-                    <option value="auto">自動切換最佳免費模型 (建議)</option>
-                    <option value="force-deepseek">強制全局使用 DeepSeek R1 (極限邏輯)</option>
+                    <option value="auto">動態神經元 (Auto)</option>
+                    <option value="force-deepseek">邏輯強化模式 (DeepSeek)</option>
                 </select>
-            </div>
-            <div class="mud-row">
-                <button class="mud-btn mud-btn-save" onclick="saveGame()">💾 下載存檔</button>
-                <button class="mud-btn mud-btn-load" onclick="document.getElementById('fileInput').click()">📂 讀取進度</button>
-                <button class="mud-btn mud-btn-clear" onclick="clearHistory()">💀 格式化世界</button>
+                <button class="mud-btn mud-btn-save" onclick="saveGame()">💾 存檔</button>
+                <button class="mud-btn mud-btn-load" onclick="document.getElementById('fileInput').click()">📂 讀取</button>
+                <button class="mud-btn mud-btn-clear" onclick="clearHistory()">💀 重啟</button>
                 <input type="file" id="fileInput" style="display:none" onchange="loadGame(event)">
             </div>
         </div>
+
+        <!-- 主聊天區 -->
         <div class="mud-chat-box" id="mudChatBox">
-            <div class="mud-loading" id="mudLoading">系統神經元連線中...</div>
+            <div class="mud-loading" id="mudLoading">Establishing link to neural core...</div>
         </div>
+
+        <!-- 側邊資訊面板 -->
+        <div class="mud-side-panel" id="mudSidePanel">
+            <div>
+                <div class="panel-title">System Logs</div>
+                <div id="systemLogs">
+                    <div class="log-entry">[00:00:00] Booting kernel...</div>
+                    <div class="log-entry">[00:00:01] Loading asset_bank...</div>
+                    <div class="log-entry">[00:00:02] Injecting narrative...</div>
+                </div>
+            </div>
+            <div style="margin-top: auto;">
+                <div class="panel-title">Inventory</div>
+                <div id="inventoryList" style="font-size: 0.85rem; color: #aaa; font-family: var(--font-mono);">
+                    初始化中...
+                </div>
+            </div>
+        </div>
+
+        <!-- 輸入區 -->
         <div class="mud-input-area">
-            <input type="text" id="userInput" placeholder="攻擊/破解/觀察/對話..." onkeypress="handleKeyPress(event)">
-            <button id="sendBtn" onclick="sendMessage()">執行</button>
+            <input type="text" id="userInput" placeholder="輸入指令 (e.g. 觀察四周 / 向前走)..." onkeypress="handleKeyPress(event)">
+            <button id="sendBtn" onclick="sendMessage()">EXECUTE</button>
         </div>
     </div>
 </div>
