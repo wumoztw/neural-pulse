@@ -347,88 +347,128 @@ body {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+    :root {
+        --mobile-padding: 15px;
+    }
+
     body {
-        padding: 10px;
+        padding: 5px;
+        min-height: 100dvh;
+        min-height: -webkit-fill-available;
     }
 
     .tutorial-section {
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: var(--mobile-padding);
+        margin-bottom: 10px;
+        width: 100%;
     }
 
     .tutorial-section>div[style*="grid-template-columns: 1fr 1fr"] {
-        grid-template-columns: 1fr !important;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        grid-template-columns: none !important;
+    }
+
+    #mud-app-root {
+        gap: 10px;
     }
 
     .mud-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto 1fr auto auto;
-        height: 92vh;
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100dvh - 20px);
+        min-height: calc(var(--vh, 1vh) * 100 - 20px);
+        border-radius: 12px;
     }
 
     .mud-header {
-        padding: 15px;
+        padding: 12px;
+        flex-shrink: 0;
     }
 
     .mud-title-main {
-        font-size: 1.2rem;
+        font-size: clamp(1rem, 5vw, 1.3rem);
         letter-spacing: 2px;
     }
 
     .mud-status-bar {
         flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-        padding: 10px 20px;
+        gap: 6px;
+        align-items: stretch;
+        padding: 8px 15px;
+        flex-shrink: 0;
     }
 
     .mud-status-item {
         width: 100%;
         justify-content: space-between;
+        font-size: 0.8rem;
     }
 
     .mud-val-container {
         flex: 1;
-        margin: 0 10px;
-    }
-
-    .mud-side-panel {
-        grid-column: 1;
-        grid-row: 5;
-        border-left: none;
-        border-top: 1px solid var(--border-color);
-        padding: 15px;
-        max-height: 200px;
-    }
-
-    .mud-chat-box {
-        grid-column: 1;
-        grid-row: 4;
-        padding: 15px;
-    }
-
-    .mud-input-area {
-        grid-column: 1;
-        grid-row: 6;
-        padding: 15px;
-        flex-direction: column;
-    }
-
-    .mud-input-area button {
-        padding: 12px;
+        margin: 0 8px;
+        max-width: 60%;
     }
 
     .mud-settings {
-        padding: 10px;
+        padding: 8px;
+        flex-shrink: 0;
     }
 
     .mud-row {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .mud-row input[type="password"] {
+        grid-column: 1 / -1;
+    }
+
+    .mud-chat-box {
+        flex-grow: 1;
+        padding: 15px;
+        height: 40vh;
+        min-height: 200px;
+    }
+
+    .mud-msg {
+        max-width: 95%;
+        font-size: 0.9rem;
+        padding: 12px;
+    }
+
+    .mud-side-panel {
+        flex-shrink: 0;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        padding: 12px;
+        max-height: 150px;
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .mud-input-area {
+        flex-shrink: 0;
+        padding: 12px;
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .mud-input-area input {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .mud-input-area button {
+        padding: 0 15px;
+        font-size: 0.8rem;
     }
 
     .mud-btn {
-        width: 100%;
-        text-align: center;
-        padding: 10px;
+        padding: 6px 8px;
+        font-size: 0.7rem;
     }
 }
